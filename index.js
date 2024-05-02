@@ -1,24 +1,25 @@
-'use strict';
+module.exports = function HoverIntent(el, onOver, onOut) {
+  let x;
+  let y;
+  let pX;
+  let pY;
+  let mouseOver = false;
+  let focused = false;
+  const h = {};
+  let state = 0;
+  let timer = 0;
 
-module.exports = function(el, onOver, onOut) {
-  var x, y, pX, pY;
-  var mouseOver = false;
-  var focused = false;
-  var h = {},
-    state = 0,
-    timer = 0;
-
-  var options = {
+  let options = {
     sensitivity: 7,
     interval: 100,
     timeout: 0,
-    handleFocus: false
+    handleFocus: false,
   };
 
-  function delay(el, e) {
+  function delay(elParam, e) {
     if (timer) timer = clearTimeout(timer);
     state = 0;
-    return focused ? undefined : onOut.call(el, e);
+    return focused ? undefined : onOut.call(elParam, e);
   }
 
   function tracker(e) {
@@ -26,29 +27,19 @@ module.exports = function(el, onOver, onOut) {
     y = e.clientY;
   }
 
-  function compare(el, e) {
+  function compare(elParam, e) {
     if (timer) timer = clearTimeout(timer);
-    if ((Math.abs(pX - x) + Math.abs(pY - y)) < options.sensitivity) {
+    if (Math.abs(pX - x) + Math.abs(pY - y) < options.sensitivity) {
       state = 1;
-      return focused ? undefined : onOver.call(el, e);
-    } else {
-      pX = x;
-      pY = y;
-      timer = setTimeout(function() {
-        compare(el, e);
-      }, options.interval);
+      return focused ? undefined : onOver.call(elParam, e);
     }
+    pX = x;
+    pY = y;
+    timer = setTimeout(() => {
+      compare(elParam, e);
+    }, options.interval);
+    return undefined;
   }
-
-  // Public methods
-  h.options = function(opt) {
-    var focusOptionChanged = opt.handleFocus !== options.handleFocus;
-    options = Object.assign({}, options, opt);
-    if (focusOptionChanged) {
-      options.handleFocus ? addFocus() : removeFocus();
-    }
-    return h;
-  };
 
   function dispatchOver(e) {
     mouseOver = true;
@@ -61,7 +52,7 @@ module.exports = function(el, onOver, onOut) {
 
       el.addEventListener('mousemove', tracker, false);
 
-      timer = setTimeout(function() {
+      timer = setTimeout(() => {
         compare(el, e);
       }, options.interval);
     }
@@ -75,7 +66,7 @@ module.exports = function(el, onOver, onOut) {
     el.removeEventListener('mousemove', tracker, false);
 
     if (state === 1) {
-      timer = setTimeout(function() {
+      timer = setTimeout(() => {
         delay(el, e);
       }, options.timeout);
     }
@@ -107,7 +98,19 @@ module.exports = function(el, onOver, onOut) {
     el.removeEventListener('blur', dispatchBlur, false);
   }
 
-  h.remove = function(reset) {
+  // Public methods
+  h.options = function getOptions(opt) {
+    let focusFn;
+    const focusOptionChanged = opt.handleFocus !== options.handleFocus;
+    options = { ...options, ...opt };
+    if (focusOptionChanged) {
+      focusFn = options.handleFocus ? addFocus : removeFocus;
+      focusFn();
+    }
+    return h;
+  };
+
+  h.remove = function remove(reset) {
     if (!el) return;
     if (reset === true) {
       state = 1;
